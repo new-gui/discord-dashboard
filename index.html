@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090a0d">
+  <title>Discord Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="app">
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-mark">D</span><span>Dashboard</span></a>
+    <div id="userArea"></div>
+  </header>
+
+  <main>
+    <section id="landing" class="screen">
+      <div class="hero">
+        <span class="eyebrow">DISCORD MANAGEMENT</span>
+        <h1>Everything your server needs.<br><em>Nothing it doesn't.</em></h1>
+        <p>Connect Discord and manage your servers from a calm, minimal dashboard.</p>
+        <a class="primary-btn" href="/auth/discord">Continue with Discord <b>→</b></a>
+        <div class="trust"><span>●</span> Secure Discord OAuth2 · Your Discord password is never handled</div>
+      </div>
+    </section>
+
+    <section id="loading" class="screen hidden">
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading your servers…</p>
+      </div>
+    </section>
+
+    <section id="servers" class="screen hidden">
+      <div class="page-heading">
+        <div>
+          <span class="eyebrow">YOUR SERVERS</span>
+          <h2>Choose a server</h2>
+          <p>Only servers you can manage are shown.</p>
+        </div>
+        <button class="secondary-btn" id="refreshServers">Refresh</button>
+      </div>
+      <div id="serverGrid" class="server-grid"></div>
+    </section>
+
+    <section id="addBot" class="screen hidden">
+      <div class="page-heading manage-heading">
+        <div>
+          <button class="back-btn" id="addBotBack">← Servers</button>
+          <span class="eyebrow">SERVER</span>
+          <h2 id="addBotTitle">Server</h2>
+          <p id="addBotSubtitle">The bot isn't in this server yet.</p>
+        </div>
+      </div>
+
+      <div class="card add-bot-card">
+        <p class="muted">Add the bot to this server to unlock configuration modules.</p>
+        <div class="actions">
+          <a class="primary-btn" id="addBotLink" href="#" target="_blank" rel="noopener">
+            Add bot to server →
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section id="manage" class="screen hidden">
+      <div class="page-heading manage-heading">
+        <div>
+          <button class="back-btn" id="backServers">← Servers</button>
+          <span class="eyebrow">SERVER</span>
+          <h2 id="serverTitle">Server</h2>
+          <p id="serverSubtitle"></p>
+        </div>
+      </div>
+
+      <div id="permissionWarning" class="notice hidden"></div>
+
+      <div class="settings-layout">
+        <aside id="moduleNav" class="settings-nav"></aside>
+        <div id="moduleContent" class="settings-content"></div>
+      </div>
+    </section>
+
+    <section id="error" class="screen hidden">
+      <div class="empty-state">
+        <div class="empty-icon">!</div>
+        <h2>Something went wrong</h2>
+        <p id="errorText"></p>
+        <a class="primary-btn" href="/">Go home</a>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="/scripts/auth.js"></script>
+<script src="/scripts/dashboard.js"></script>
+</body>
+</html>
