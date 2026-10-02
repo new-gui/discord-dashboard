@@ -406,26 +406,100 @@ function isSnowflakeArray(value, max = 50) {
   return Array.isArray(value) && value.length <= max && value.every(isSnowflake);
 }
 
+function isString(value, max = 1000) {
+  return typeof value === 'string' && value.length <= max;
+}
+
+function isBool(value) {
+  return typeof value === 'boolean';
+}
+
+// An http(s) URL up to 2000 chars, or an empty / whitespace-only string.
+function isUrlOrEmpty(value) {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return true;
+  if (trimmed.length > 2000) return false;
+  try {
+    const u = new URL(trimmed);
+    return u.protocol === 'https:' || u.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+// Recursively walk a schema. Leaf rules are functions returning boolean.
+// Nested rules are plain objects. Unknown keys are silently dropped.
+// Invalid values are pushed into `rejected` so the caller can report them.
+function validateShape(schema, data, pathPrefix = '', rejected = []) {
+  const out = {};
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return out;
+
+  for (const [key, rule] of Object.entries(schema)) {
+    if (!(key in data)) continue;
+
+    const path = pathPrefix ? `${pathPrefix}.${key}` : key;
+    const value = data[key];
+
+    if (typeof rule === 'function') {
+      if (rule(value)) {
+        out[key] = typeof value === 'string' ? value.trim() : value;
+      } else {
+        rejected.push(path);
+      }
+      continue;
+    }
+
+    if (rule && typeof rule === 'object') {
+      out[key] = validateShape(rule, value, path, rejected);
+      continue;
+    }
+  }
+
+  return out;
+}
+
 const MODULE_SCHEMAS = {
   join: {
-    enabled: v => typeof v === 'boolean',
+    enabled: isBool,
     channelId: v => v === '' || isSnowflake(v),
-    message: v => typeof v === 'string' && v.length <= 1000,
+    message: v => isString(v, 1000),
     pingRoleId: v => v === '' || isSnowflake(v),
-    pingOnJoin: v => typeof v === 'boolean'
+    pingOnJoin: isBool,
+
+    card: {
+      enabled: isBool,
+      backgroundUrl: isUrlOrEmpty,
+      gifSupport: isBool,
+      confetti: isBool,
+      dynamicColor: isBool,
+      showJoinDate: isBool,
+      showMemberCount: isBool
+    },
+
+    separateBots: isBool,
+    botMessage: v => isString(v, 1000),
+
+    welcomeBack: {
+      enabled: isBool,
+      message: v => isString(v, 1000)
+    }
   },
+
   leave: {
-    enabled: v => typeof v === 'boolean',
+    enabled: isBool,
     channelId: v => v === '' || isSnowflake(v),
-    message: v => typeof v === 'string' && v.length <= 1000
+    message: v => isString(v, 1000)
   },
+
   selfRoles: {
     channelId: v => v === '' || isSnowflake(v),
-    message: v => typeof v === 'string' && v.length <= 1000,
+    message: v => isString(v, 1000),
     roleIds: v => isSnowflakeArray(v, 25)
   },
+
   auditlog: {
-    enabled: v => typeof v === 'boolean',
+    enabled: isBool,
     channelId: v => v === '' || isSnowflake(v)
   }
 };
@@ -433,16 +507,18 @@ const MODULE_SCHEMAS = {
 function validateModuleData(moduleId, data) {
   const schema = MODULE_SCHEMAS[moduleId];
   if (!schema) throw new Error(`No schema for module: ${moduleId}`);
-
-  const out = {};
-  for (const [key, validator] of Object.entries(schema)) {
-    if (!(key in data)) continue;
-    if (!validator(data[key])) {
-      throw new Error(`Invalid value for ${moduleId}.${key}`);
-    }
-    out[key] = data[key];
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('Invalid module data.');
   }
-  return out;
+
+  const rejected = [];
+  const sanitized = validateShape(schema, data, '', rejected);
+
+  if (rejected.length) {
+    throw new Error(`Invalid value for: ${rejected.join(', ')}`);
+  }
+
+  return sanitized;
 }
 
 // ---------------------------------------------------------------------------
@@ -455,7 +531,6 @@ app.get('/api/modules', (req, res) => {
 app.get('/auth/discord', (req, res) => {
   const state = randomId();
 
-  // Stash the OAuth state in Mongo with a short TTL.
   db.collection('oauth_states').insertOne({
     _id: state,
     createdAt: new Date(),
